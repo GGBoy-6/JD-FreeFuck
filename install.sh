@@ -1,6 +1,6 @@
 #!/bin/env bash
 ## Author:SuperManito
-## Modified:2021-3-10
+## Modified:2021-3-13
 
 ## ======================================== 说 明 =========================================================
 ##                                                                                                        #
@@ -123,6 +123,8 @@ function EnvStructures() {
     systemctl reload firewalld >/dev/null 2>&1
     ## 基于 Debian 发行版和及其衍生发行版的软件包安装
     if [ $SYSTEM = "Debian" ]; then
+        ## 更新软件源，列出索引
+        apt update
         ## 卸载 Nodejs 旧版本，从而确保安装新版本
         apt remove -y nodejs npm >/dev/null 2>&1
         rm -rf /etc/apt/sources.list.d/nodesource.list
@@ -135,6 +137,8 @@ function EnvStructures() {
         apt autoremove -y
     ## 基于 RedHat 发行版和及其衍生发行版的软件包安装
     elif [ $SYSTEM = "RedHat" ]; then
+        ## 更新软件源，建立本地缓存
+        yum makecache
         ## 卸载 Nodejs 旧版本，从而确保安装新版本
         yum remove -y nodejs npm >/dev/null 2>&1
         rm -rf /etc/yum.repos.d/nodesource-*.repo
@@ -190,9 +194,6 @@ function ProjectDeployment() {
     ## 创建目录
     mkdir $BASE/config
     mkdir $BASE/log
-    ## 定义全局变量
-    echo "export JD_DIR=$BASE" >>/etc/profile
-    source /etc/profile
     ## 根据安装目录配置定时任务
     sed -i "s#BASE#$BASE#g" $BASE/sample/computer.list.sample
     ## 创建项目配置文件与定时任务配置文件
@@ -205,20 +206,19 @@ function ProjectDeployment() {
     cd $BASE/panel
     npm install || npm install --registry=https://registry.npm.taobao.org
     npm install -g pm2
-    pm2 start server.js
+    pm2 start ecosystem.config.js
     ## 拉取活动脚本
-    cd $BASE
-    bash git_pull.sh
-    bash git_pull.sh >/dev/null 2>&1
+    bash $BASE/git_pull.sh
+    bash $BASE/git_pull.sh >/dev/null 2>&1
     ## 创建软链接
     ln -sf $BASE/jd.sh /usr/local/bin/jd
     ln -sf $BASE/git_pull.sh /usr/local/bin/git_pull
     ln -sf $BASE/rm_log.sh /usr/local/bin/rm_log
     ln -sf $BASE/export_sharecodes.sh /usr/local/bin/export_sharecodes
     ln -sf /opt/jd/run_all.sh /usr/local/bin/run_all
-    ## 赋权所有项目文件
-    chmod 777 $BASE/*
-    chmod 777 /usr/local/bin/*
+    ## 定义全局变量
+    echo "export JD_DIR=$BASE" >>/etc/profile
+    source /etc/profile
 }
 
 ## 更改配置文件：
